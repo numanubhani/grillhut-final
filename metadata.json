@@ -1,0 +1,8 @@
+
+{
+  "name": "GRILL HUT",
+  "description": "Premium flame-grilled burgers, artisan pizzas, and gourmet sides. Experience the heat at GRILL HUT.",
+  "requestFramePermissions": [
+    "notifications"
+  ]
+}
