@@ -4,10 +4,11 @@ import { useApp } from '../context/AppContext';
 import { ShoppingCart, Star, ChevronRight, Flame, UtensilsCrossed, Pizza, Sandwich, Cherry, ArrowDown, Heart } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import ProductModal from '../components/ProductModal';
+import CartSidebar from '../components/CartSidebar';
 import { Product } from '../types';
 
 const Home: React.FC = () => {
-  const { products, categories, addToCart } = useApp();
+  const { products, categories, addToCart, isCartOpen, setIsCartOpen } = useApp();
   const [activeCategory, setActiveCategory] = useState<string>('All');
   const [likedProducts, setLikedProducts] = useState<Set<string>>(new Set());
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -282,6 +283,12 @@ const Home: React.FC = () => {
           setIsModalOpen(false);
           setSelectedProduct(null);
         }}
+      />
+
+      {/* Cart Sidebar */}
+      <CartSidebar 
+        isOpen={isCartOpen}
+        onClose={() => setIsCartOpen(false)}
       />
     </div>
   );

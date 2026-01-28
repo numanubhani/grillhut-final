@@ -5,7 +5,7 @@ import { ShoppingBag, Sun, Moon, User, LayoutDashboard, LogOut, Flame } from 'lu
 import { useApp } from '../context/AppContext';
 
 const Navbar: React.FC = () => {
-  const { isDarkMode, toggleDarkMode, isAdmin, setAdminStatus, cart } = useApp();
+  const { isDarkMode, toggleDarkMode, isAdmin, setAdminStatus, cart, setIsCartOpen } = useApp();
   const cartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
 
   return (
@@ -32,8 +32,8 @@ const Navbar: React.FC = () => {
               {isDarkMode ? <Sun className="w-5 h-5 text-orange-400" /> : <Moon className="w-5 h-5 text-zinc-600" />}
             </button>
 
-            <Link 
-              to="/cart"
+            <button 
+              onClick={() => setIsCartOpen(true)}
               className="relative p-3 rounded-2xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all active:scale-90"
             >
               <ShoppingBag className="w-5 h-5" />
@@ -42,7 +42,7 @@ const Navbar: React.FC = () => {
                   {cartCount}
                 </span>
               )}
-            </Link>
+            </button>
 
             {isAdmin ? (
               <div className="flex items-center gap-2">

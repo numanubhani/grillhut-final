@@ -5,7 +5,7 @@ import { AppProvider } from './context/AppContext';
 import Navbar from './components/Navbar';
 import DeliveryModal from './components/DeliveryModal';
 import Home from './pages/Home';
-import Cart from './pages/Cart';
+import Checkout from './pages/Checkout';
 import ProductDetail from './pages/ProductDetail';
 import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
@@ -27,7 +27,7 @@ const App: React.FC = () => {
           <main className="flex-grow animate-in fade-in duration-500">
             <Routes>
               <Route path="/" element={<Home />} />
-              <Route path="/cart" element={<Cart />} />
+              <Route path="/checkout" element={<Checkout />} />
               <Route path="/product/:id" element={<ProductDetail />} />
               <Route path="/admin/login" element={<AdminLogin />} />
               <Route path="/admin" element={<AdminDashboard />} />

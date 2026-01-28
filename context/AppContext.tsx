@@ -13,11 +13,14 @@ interface AppContextType extends AppState {
   removeCategory: (id: string) => void;
   addToCart: (item: OrderItem) => void;
   removeFromCart: (productId: string) => void;
+  updateCartQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;
   placeOrder: (customerName: string, customerPhone: string, customerAddress?: string) => void;
   updateOrderStatus: (orderId: string, status: Order['status']) => void;
   setDeliveryType: (type: 'pickup' | 'delivery' | null) => void;
   setDeliveryLocation: (location: string) => void;
+  isCartOpen: boolean;
+  setIsCartOpen: (open: boolean) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -51,6 +54,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [deliveryLocation, setDeliveryLocation] = useState<string>(() => {
     return localStorage.getItem('gh_deliveryLocation') || '';
   });
+  const [isCartOpen, setIsCartOpen] = useState(false);
 
   useEffect(() => {
     localStorage.setItem('gh_products', JSON.stringify(products));
@@ -109,6 +113,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCart(prev => prev.filter(i => i.productId !== productId));
   };
 
+  const updateCartQuantity = (productId: string, quantity: number) => {
+    if (quantity <= 0) {
+      removeFromCart(productId);
+      return;
+    }
+    setCart(prev => prev.map(i => i.productId === productId ? { ...i, quantity } : i));
+  };
+
   const clearCart = () => setCart([]);
 
   const placeOrder = (customerName: string, customerPhone: string, customerAddress?: string) => {
@@ -144,8 +156,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       products, categories, orders, isDarkMode, isAdmin, cart, deliveryType, deliveryLocation,
       toggleDarkMode, setAdminStatus, addProduct, removeProduct,
       toggleProductVisibility, addCategory, removeCategory,
-      addToCart, removeFromCart, clearCart, placeOrder, updateOrderStatus,
-      setDeliveryType, setDeliveryLocation
+      addToCart, removeFromCart, updateCartQuantity, clearCart, placeOrder, updateOrderStatus,
+      setDeliveryType, setDeliveryLocation, isCartOpen, setIsCartOpen
     }}>
       {children}
     </AppContext.Provider>
