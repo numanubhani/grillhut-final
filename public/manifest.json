@@ -3,10 +3,11 @@
   "short_name": "Grill Hut",
   "description": "Authentic open-flame cooking. Experience the real taste of grilled excellence.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#fafafa",
   "theme_color": "#f97316",
-  "orientation": "portrait-primary",
+  "orientation": "any",
   "icons": [
     {
       "src": "/icon.svg",

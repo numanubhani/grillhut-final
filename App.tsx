@@ -4,6 +4,8 @@ import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 import { AppProvider } from './context/AppContext';
 import Navbar from './components/Navbar';
 import DeliveryModal from './components/DeliveryModal';
+import PWAInstallPrompt from './components/PWAInstallPrompt';
+import LocationPrompt from './components/LocationPrompt';
 import Home from './pages/Home';
 import Checkout from './pages/Checkout';
 import ProductDetail from './pages/ProductDetail';
@@ -23,6 +25,8 @@ const App: React.FC = () => {
       <Router>
         <div className="min-h-screen flex flex-col">
           <DeliveryModal />
+          <LocationPrompt />
+          <PWAInstallPrompt />
           <Navbar />
           <main className="flex-grow animate-in fade-in duration-500">
             <Routes>
