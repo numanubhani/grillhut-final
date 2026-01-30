@@ -5,8 +5,12 @@ import { ShoppingBag, Sun, Moon, User, LayoutDashboard, LogOut, Flame } from 'lu
 import { useApp } from '../context/AppContext';
 
 const Navbar: React.FC = () => {
-  const { isDarkMode, toggleDarkMode, isAdmin, setAdminStatus, cart, setIsCartOpen } = useApp();
+  const { isDarkMode, toggleDarkMode, isAdmin, setAdminStatus, cart, isCartOpen, setIsCartOpen } = useApp();
   const cartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
+
+  const toggleCart = () => {
+    setIsCartOpen(!isCartOpen);
+  };
 
   return (
     <nav className="sticky top-0 z-[60] w-full glass-effect border-b border-zinc-200/50 dark:border-zinc-800/50">
@@ -33,8 +37,9 @@ const Navbar: React.FC = () => {
             </button>
 
             <button 
-              onClick={() => setIsCartOpen(true)}
+              onClick={toggleCart}
               className="relative p-3 rounded-2xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all active:scale-90"
+              aria-label="Toggle cart"
             >
               <ShoppingBag className="w-5 h-5" />
               {cartCount > 0 && (

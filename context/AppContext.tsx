@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { Product, Category, Order, AppState, OrderItem, Customer } from '../types';
+import { Product, Category, Order, AppState, OrderItem, Customer, AddOn } from '../types';
 import { INITIAL_PRODUCTS, INITIAL_CATEGORIES } from '../constants';
 
 interface AppContextType extends AppState {
@@ -14,6 +14,7 @@ interface AppContextType extends AppState {
   addToCart: (item: OrderItem) => void;
   removeFromCart: (productId: string) => void;
   updateCartQuantity: (productId: string, quantity: number) => void;
+  updateCartItemAddOns: (productId: string, addOns: AddOn[]) => void;
   clearCart: () => void;
   placeOrder: (customerName: string, customerPhone: string, customerAddress?: string) => void;
   updateOrderStatus: (orderId: string, status: Order['status']) => void;
@@ -140,6 +141,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCart(prev => prev.map(i => i.productId === productId ? { ...i, quantity } : i));
   };
 
+  const updateCartItemAddOns = (productId: string, addOns: AddOn[]) => {
+    setCart(prev => prev.map(i => {
+      if (i.productId === productId) {
+        const product = products.find(p => p.id === productId);
+        const basePrice = product?.price || 0;
+        // Calculate new add-ons total
+        const newAddOnsTotal = addOns.reduce((sum, addOn) => sum + addOn.price, 0);
+        // New price = base product price + new add-ons total
+        const newPrice = basePrice + newAddOnsTotal;
+        // Update name to include add-ons if any
+        const baseName = i.name.split(' (')[0]; // Get base product name
+        const newName = addOns.length > 0 
+          ? `${baseName} (${addOns.map(a => a.name).join(', ')})`
+          : baseName;
+        return { ...i, name: newName, addOns: addOns.length > 0 ? addOns : undefined, price: newPrice };
+      }
+      return i;
+    }));
+  };
+
   const clearCart = () => setCart([]);
 
   const placeOrder = (customerName: string, customerPhone: string, customerAddress?: string) => {
@@ -214,7 +235,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       products, categories, orders, customers, isDarkMode, isAdmin, currentCustomer, cart, deliveryType, deliveryLocation,
       toggleDarkMode, setAdminStatus, addProduct, removeProduct,
       toggleProductVisibility, addCategory, removeCategory,
-      addToCart, removeFromCart, updateCartQuantity, clearCart, placeOrder, updateOrderStatus,
+      addToCart, removeFromCart, updateCartQuantity, updateCartItemAddOns, clearCart, placeOrder, updateOrderStatus,
       setDeliveryType, setDeliveryLocation, isCartOpen, setIsCartOpen,
       registerCustomer, loginCustomer, logoutCustomer, getCustomerOrders
     }}>

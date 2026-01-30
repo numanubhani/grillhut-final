@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Trash2, CreditCard, ShoppingCart, X, Plus, Minus, ChevronDown, ChevronUp } from 'lucide-react';
+import { Trash2, CreditCard, ShoppingCart, X, Plus, Minus, ChevronDown, ChevronUp, Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { OrderItem, AddOn } from '../types';
 
 interface CartSidebarProps {
   isOpen: boolean;
@@ -9,8 +10,10 @@ interface CartSidebarProps {
 }
 
 const CartSidebar: React.FC<CartSidebarProps> = ({ isOpen, onClose }) => {
-  const { cart, products, removeFromCart, updateCartQuantity, clearCart, deliveryType } = useApp();
+  const { cart, products, removeFromCart, updateCartQuantity, updateCartItemAddOns, clearCart, deliveryType } = useApp();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<OrderItem | null>(null);
+  const [showAddOnsModal, setShowAddOnsModal] = useState(false);
   const navigate = useNavigate();
 
   // Calculate totals
@@ -27,6 +30,33 @@ const CartSidebar: React.FC<CartSidebarProps> = ({ isOpen, onClose }) => {
     if (cart.length === 0) return;
     onClose();
     navigate('/checkout');
+  };
+
+  const handleViewAddOns = (item: OrderItem) => {
+    setSelectedItem(item);
+    setShowAddOnsModal(true);
+  };
+
+  const handleRemoveAddOn = (addOnId: string) => {
+    if (!selectedItem) return;
+    const updatedAddOns = selectedItem.addOns?.filter(a => a.id !== addOnId) || [];
+    updateCartItemAddOns(selectedItem.productId, updatedAddOns);
+    
+    // Update local state
+    const updatedItem = { ...selectedItem, addOns: updatedAddOns.length > 0 ? updatedAddOns : undefined };
+    setSelectedItem(updatedItem);
+    
+    // Close modal if no add-ons left
+    if (updatedAddOns.length === 0) {
+      setTimeout(() => {
+        handleCloseAddOnsModal();
+      }, 300);
+    }
+  };
+
+  const handleCloseAddOnsModal = () => {
+    setShowAddOnsModal(false);
+    setSelectedItem(null);
   };
 
   if (!isOpen) return null;
@@ -132,9 +162,22 @@ const CartSidebar: React.FC<CartSidebarProps> = ({ isOpen, onClose }) => {
                                 
                                 {/* Add-ons */}
                                 {item.addOns && item.addOns.length > 0 && (
-                                  <p className="text-[10px] text-orange-600 dark:text-orange-400 mb-1 line-clamp-1">
-                                    + {item.addOns.map(a => a.name).join(', ')}
-                                  </p>
+                                  <div className="flex items-center gap-1.5 mb-1">
+                                    <p className="text-[10px] text-orange-600 dark:text-orange-400 line-clamp-1 flex-1">
+                                      + {item.addOns.length} {item.addOns.length === 1 ? 'add-on' : 'add-ons'}
+                                    </p>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleViewAddOns(item);
+                                      }}
+                                      className="p-1 text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded transition-colors shrink-0"
+                                      aria-label="View add-ons"
+                                      title="View add-ons"
+                                    >
+                                      <Eye className="w-3 h-3" />
+                                    </button>
+                                  </div>
                                 )}
 
                                 {/* Price and Quantity Controls */}
@@ -230,6 +273,78 @@ const CartSidebar: React.FC<CartSidebarProps> = ({ isOpen, onClose }) => {
           </div>
         )}
       </div>
+
+      {/* Add-ons View Modal */}
+      {showAddOnsModal && selectedItem && (
+        <div 
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in duration-300"
+          onClick={handleCloseAddOnsModal}
+        >
+          <div 
+            className="w-full max-w-md bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl overflow-hidden flex flex-col transform transition-all animate-in zoom-in-95 duration-300"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b border-zinc-200 dark:border-zinc-800">
+              <div>
+                <h3 className="text-lg font-black text-zinc-900 dark:text-white">Add-ons</h3>
+                <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">
+                  {selectedItem.name.split(' (')[0]}
+                </p>
+              </div>
+              <button
+                onClick={handleCloseAddOnsModal}
+                className="w-8 h-8 bg-zinc-100 dark:bg-zinc-800 rounded-full flex items-center justify-center hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
+              >
+                <X className="w-4 h-4 text-zinc-600 dark:text-zinc-400" />
+              </button>
+            </div>
+
+            {/* Add-ons List */}
+            <div className="flex-1 overflow-y-auto p-4 max-h-[60vh]">
+              {selectedItem.addOns && selectedItem.addOns.length > 0 ? (
+                <div className="space-y-2">
+                  {selectedItem.addOns.map(addOn => (
+                    <div
+                      key={addOn.id}
+                      className="flex items-center justify-between p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl border border-zinc-200 dark:border-zinc-700"
+                    >
+                      <div className="flex-1">
+                        <p className="font-medium text-sm text-zinc-900 dark:text-white">{addOn.name}</p>
+                        <p className="text-xs text-orange-600 dark:text-orange-400 mt-0.5">
+                          +Rs. {addOn.price.toFixed(2)}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => handleRemoveAddOn(addOn.id)}
+                        className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                        aria-label="Remove add-on"
+                        title="Remove add-on"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-zinc-500 dark:text-zinc-400">No add-ons selected</p>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/30">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-zinc-600 dark:text-zinc-400">Total Add-ons</span>
+                <span className="text-lg font-black text-orange-600">
+                  Rs. {selectedItem.addOns?.reduce((sum, a) => sum + a.price, 0).toFixed(2) || '0.00'}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };
