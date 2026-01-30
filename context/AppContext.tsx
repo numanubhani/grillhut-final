@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { Product, Category, Order, AppState, OrderItem } from '../types';
+import { Product, Category, Order, AppState, OrderItem, Customer } from '../types';
 import { INITIAL_PRODUCTS, INITIAL_CATEGORIES } from '../constants';
 
 interface AppContextType extends AppState {
@@ -21,6 +21,10 @@ interface AppContextType extends AppState {
   setDeliveryLocation: (location: string) => void;
   isCartOpen: boolean;
   setIsCartOpen: (open: boolean) => void;
+  registerCustomer: (name: string, email: string, phone: string, password: string) => Promise<boolean>;
+  loginCustomer: (email: string, password: string) => Promise<boolean>;
+  logoutCustomer: () => void;
+  getCustomerOrders: () => Order[];
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -41,11 +45,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return saved ? JSON.parse(saved) : [];
   });
 
+  const [customers, setCustomers] = useState<Customer[]>(() => {
+    const saved = localStorage.getItem('gh_customers');
+    return saved ? JSON.parse(saved) : [];
+  });
+
   const [isDarkMode, setIsDarkMode] = useState(() => {
     return localStorage.getItem('gh_theme') === 'dark';
   });
 
   const [isAdmin, setIsAdmin] = useState(false);
+  const [currentCustomer, setCurrentCustomer] = useState<Customer | null>(() => {
+    const saved = localStorage.getItem('gh_currentCustomer');
+    return saved ? JSON.parse(saved) : null;
+  });
   const [cart, setCart] = useState<OrderItem[]>([]);
   const [deliveryType, setDeliveryType] = useState<'pickup' | 'delivery' | null>(() => {
     const saved = localStorage.getItem('gh_deliveryType');
@@ -60,7 +73,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem('gh_products', JSON.stringify(products));
     localStorage.setItem('gh_categories', JSON.stringify(categories));
     localStorage.setItem('gh_orders', JSON.stringify(orders));
+    localStorage.setItem('gh_customers', JSON.stringify(customers));
     localStorage.setItem('gh_theme', isDarkMode ? 'dark' : 'light');
+    if (currentCustomer) {
+      localStorage.setItem('gh_currentCustomer', JSON.stringify(currentCustomer));
+    } else {
+      localStorage.removeItem('gh_currentCustomer');
+    }
     if (deliveryType) localStorage.setItem('gh_deliveryType', deliveryType);
     if (deliveryLocation) localStorage.setItem('gh_deliveryLocation', deliveryLocation);
     if (isDarkMode) {
@@ -68,7 +87,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } else {
       document.documentElement.classList.remove('dark');
     }
-  }, [products, categories, orders, isDarkMode, deliveryType, deliveryLocation]);
+  }, [products, categories, orders, customers, currentCustomer, isDarkMode, deliveryType, deliveryLocation]);
 
   const toggleDarkMode = () => setIsDarkMode(prev => !prev);
   const setAdminStatus = (status: boolean) => setIsAdmin(status);
@@ -126,6 +145,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const placeOrder = (customerName: string, customerPhone: string, customerAddress?: string) => {
     const newOrder: Order = {
       id: 'ORD-' + Math.random().toString(36).substr(2, 6).toUpperCase(),
+      customerId: currentCustomer?.id,
       customerName,
       customerPhone,
       customerAddress,
@@ -147,17 +167,56 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const registerCustomer = async (name: string, email: string, phone: string, password: string): Promise<boolean> => {
+    // Check if email already exists
+    if (customers.some(c => c.email === email)) {
+      return false;
+    }
+
+    const newCustomer: Customer = {
+      id: 'CUST-' + Math.random().toString(36).substr(2, 9).toUpperCase(),
+      name,
+      email,
+      phone,
+      password, // In production, hash this password
+      createdAt: Date.now()
+    };
+
+    setCustomers(prev => [...prev, newCustomer]);
+    setCurrentCustomer(newCustomer);
+    return true;
+  };
+
+  const loginCustomer = async (email: string, password: string): Promise<boolean> => {
+    const customer = customers.find(c => c.email === email && c.password === password);
+    if (customer) {
+      setCurrentCustomer(customer);
+      return true;
+    }
+    return false;
+  };
+
+  const logoutCustomer = () => {
+    setCurrentCustomer(null);
+  };
+
+  const getCustomerOrders = (): Order[] => {
+    if (!currentCustomer) return [];
+    return orders.filter(order => order.customerId === currentCustomer.id);
+  };
+
   const updateOrderStatus = (orderId: string, status: Order['status']) => {
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o));
   };
 
   return (
     <AppContext.Provider value={{
-      products, categories, orders, isDarkMode, isAdmin, cart, deliveryType, deliveryLocation,
+      products, categories, orders, customers, isDarkMode, isAdmin, currentCustomer, cart, deliveryType, deliveryLocation,
       toggleDarkMode, setAdminStatus, addProduct, removeProduct,
       toggleProductVisibility, addCategory, removeCategory,
       addToCart, removeFromCart, updateCartQuantity, clearCart, placeOrder, updateOrderStatus,
-      setDeliveryType, setDeliveryLocation, isCartOpen, setIsCartOpen
+      setDeliveryType, setDeliveryLocation, isCartOpen, setIsCartOpen,
+      registerCustomer, loginCustomer, logoutCustomer, getCustomerOrders
     }}>
       {children}
     </AppContext.Provider>

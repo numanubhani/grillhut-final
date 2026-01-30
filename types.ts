@@ -38,8 +38,18 @@ export interface OrderItem {
   addOns?: AddOn[];
 }
 
+export interface Customer {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  password: string; // In production, this should be hashed
+  createdAt: number;
+}
+
 export interface Order {
   id: string;
+  customerId?: string; // Link to customer if logged in
   customerName: string;
   customerPhone: string;
   customerAddress?: string;
@@ -54,8 +64,10 @@ export interface AppState {
   products: Product[];
   categories: Category[];
   orders: Order[];
+  customers: Customer[];
   isDarkMode: boolean;
   isAdmin: boolean;
+  currentCustomer: Customer | null;
   cart: OrderItem[];
   deliveryType: 'pickup' | 'delivery' | null;
   deliveryLocation: string;
