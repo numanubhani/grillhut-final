@@ -1,8 +1,7 @@
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
-import { ShoppingCart, Star, ChevronRight, Flame, UtensilsCrossed, Pizza, Sandwich, Cherry, ArrowDown, Heart } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { ShoppingCart, Star, Flame, UtensilsCrossed, Pizza, Sandwich, Cherry, Heart } from 'lucide-react';
 import ProductModal from '../components/ProductModal';
 import CartSidebar from '../components/CartSidebar';
 import { Product } from '../types';
@@ -18,7 +17,7 @@ const Home: React.FC = () => {
     'Burgers': Flame,
     'Pizza': Pizza,
     'Sandwiches': Sandwich,
-    'Nuggets': UtensilsCrossed,
+    'Appetizer': UtensilsCrossed,
     'All': Cherry
   };
 
@@ -32,65 +31,6 @@ const Home: React.FC = () => {
 
   return (
     <div className="min-h-screen">
-      {/* Hero Section */}
-      <section className="relative min-h-[90vh] flex items-center overflow-hidden px-4 sm:px-6 lg:px-8">
-        <div className="absolute inset-0 z-0">
-          <img 
-            src="https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&w=1920&q=80" 
-            className="w-full h-full object-cover opacity-40 dark:opacity-20 transition-all duration-1000 group-hover:scale-105"
-            alt="Hero Background"
-          />
-          <div className="absolute inset-0 bg-gradient-to-tr from-[#fafafa] via-[#fafafa]/80 to-transparent dark:from-[#09090b] dark:via-[#09090b]/80" />
-        </div>
-        
-        <div className="max-w-7xl mx-auto w-full relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-          <div className="max-w-2xl animate-in slide-in-from-left duration-700">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 text-xs font-black uppercase tracking-widest mb-8">
-              <Flame className="w-3.5 h-3.5 fill-current" />
-              The Best in Town
-            </div>
-            <h1 className="text-6xl md:text-8xl font-serif font-extrabold mb-8 leading-[1] tracking-tight text-zinc-950 dark:text-white">
-              FUEL YOUR <br/>
-              <span className="text-orange-600 inline-block">FIRE</span> INSIDE.
-            </h1>
-            <p className="text-xl text-zinc-600 dark:text-zinc-400 mb-10 max-w-lg leading-relaxed font-medium">
-              GRILL HUT brings you the authentic taste of open-flame cooking. No shortcuts, just pure smoke and flavor.
-            </p>
-            <div className="flex flex-wrap gap-4">
-              <button 
-                onClick={() => document.getElementById('menu-anchor')?.scrollIntoView({ behavior: 'smooth' })}
-                className="group px-8 py-5 bg-orange-600 hover:bg-orange-700 text-white rounded-2xl font-black transition-all shadow-2xl shadow-orange-600/30 active:scale-95 flex items-center gap-2"
-              >
-                Order Now
-                <ChevronRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
-              </button>
-              <button className="px-8 py-5 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white rounded-2xl font-black border border-zinc-200 dark:border-zinc-700 transition-all hover:bg-zinc-50 dark:hover:bg-zinc-700 active:scale-95">
-                Our Story
-              </button>
-            </div>
-          </div>
-          
-          <div className="hidden lg:block relative animate-float">
-             <div className="relative z-10 w-full aspect-square rounded-[4rem] overflow-hidden shadow-2xl border-4 border-white dark:border-zinc-800 transform rotate-3 scale-90">
-                <img 
-                  src="https://images.unsplash.com/photo-1594212699903-ec8a3eca50f5?auto=format&fit=crop&w=800&q=80" 
-                  className="w-full h-full object-cover" 
-                  alt="Delicious Burger" 
-                />
-             </div>
-             <div className="absolute -top-10 -right-10 w-64 h-64 bg-orange-500/20 blur-[100px] -z-10 rounded-full" />
-             <div className="absolute -bottom-10 -left-10 w-64 h-64 bg-yellow-500/20 blur-[100px] -z-10 rounded-full" />
-          </div>
-        </div>
-        
-        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 animate-bounce opacity-50">
-          <span className="text-[10px] font-black uppercase tracking-widest">Scroll Down</span>
-          <ArrowDown className="w-4 h-4" />
-        </div>
-      </section>
-
-      <div id="menu-anchor" className="h-10" />
-
       {/* Main Content with Fancy Sidebar */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
         <div className="flex flex-col lg:flex-row gap-12 items-start">

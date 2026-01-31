@@ -60,5 +60,70 @@ self.addEventListener('activate', (event) => {
       );
     })
   );
+  // Take control of all pages immediately
+  return self.clients.claim();
+});
+
+// Listen for messages from the app
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'NEW_ORDER') {
+    const orderData = event.data.order;
+    showNotification(orderData);
+  }
+});
+
+// Show notification function
+function showNotification(orderData) {
+  const title = '🔔 New Order Received!';
+  const total = typeof orderData.total === 'number' ? orderData.total.toFixed(2) : orderData.total;
+  const options = {
+    body: `Order #${orderData.id}\nFrom: ${orderData.customerName}\nTotal: Rs. ${total}`,
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
+    tag: `order-${orderData.id}`, // Prevent duplicate notifications
+    requireInteraction: true, // Keep notification visible until user interacts
+    vibrate: [200, 100, 200], // Vibration pattern for mobile
+    data: {
+      orderId: orderData.id,
+      url: `/#/track-order/${orderData.id}`
+    },
+    actions: [
+      {
+        action: 'view',
+        title: 'View Order'
+      },
+      {
+        action: 'dismiss',
+        title: 'Dismiss'
+      }
+    ]
+  };
+
+  return self.registration.showNotification(title, options);
+}
+
+// Handle notification clicks
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+
+  if (event.action === 'view' || !event.action) {
+    // Open the app and navigate to the order
+    const urlToOpen = event.notification.data?.url || '/';
+    event.waitUntil(
+      clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+        // Check if there's already a window/tab open with the target URL
+        for (let i = 0; i < clientList.length; i++) {
+          const client = clientList[i];
+          if (client.url === urlToOpen && 'focus' in client) {
+            return client.focus();
+          }
+        }
+        // If no window is open, open a new one
+        if (clients.openWindow) {
+          return clients.openWindow(urlToOpen);
+        }
+      })
+    );
+  }
 });
 

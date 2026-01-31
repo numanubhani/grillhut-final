@@ -47,6 +47,16 @@ export interface Customer {
   createdAt: number;
 }
 
+export type OrderTrackingStatus = 
+  | 'pending' 
+  | 'confirmed' 
+  | 'preparing' 
+  | 'ready' 
+  | 'out_for_delivery' 
+  | 'ready_for_pickup' 
+  | 'completed' 
+  | 'cancelled';
+
 export interface Order {
   id: string;
   customerId?: string; // Link to customer if logged in
@@ -56,8 +66,9 @@ export interface Order {
   deliveryType: 'pickup' | 'delivery';
   items: OrderItem[];
   total: number;
-  status: 'pending' | 'completed' | 'cancelled';
+  status: OrderTrackingStatus;
   timestamp: number;
+  statusHistory?: { status: OrderTrackingStatus; timestamp: number }[];
 }
 
 export interface AppState {

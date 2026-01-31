@@ -42,7 +42,7 @@ const Checkout: React.FC = () => {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (cart.length === 0) return;
     if (!paymentMethod) {
@@ -50,11 +50,22 @@ const Checkout: React.FC = () => {
       return;
     }
     const address = deliveryType === 'delivery' ? customerAddress : undefined;
-    placeOrder(customerName, `${countryCode} ${customerPhone}`, address);
-    setIsOrdered(true);
-    setTimeout(() => {
-      navigate('/');
-    }, 3000);
+    try {
+      setIsOrdered(true);
+      const orderId = await placeOrder(
+        customerName, 
+        `${countryCode} ${customerPhone}`, 
+        address,
+        paymentMethod,
+        specialInstructions
+      );
+      setTimeout(() => {
+        navigate(`/track-order/${orderId}`);
+      }, 2000);
+    } catch (error) {
+      setIsOrdered(false);
+      // Error toast is shown in placeOrder function
+    }
   };
 
   if (isOrdered) {
@@ -64,7 +75,7 @@ const Checkout: React.FC = () => {
           <CheckCircle2 className="w-12 h-12 text-green-600" />
         </div>
         <h2 className="text-3xl font-serif font-black mb-2">Order Placed Successfully!</h2>
-        <p className="text-slate-500 dark:text-zinc-400">Redirecting you to the home page...</p>
+        <p className="text-slate-500 dark:text-zinc-400">Redirecting you to order tracking...</p>
       </div>
     );
   }

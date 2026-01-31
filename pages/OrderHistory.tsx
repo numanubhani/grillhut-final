@@ -1,31 +1,74 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronLeft, Package, Clock, CheckCircle2, XCircle, MapPin, Phone, Calendar } from 'lucide-react';
+import { ChevronLeft, Package, Clock, CheckCircle2, XCircle, MapPin, Phone, Calendar, Navigation, ChefHat, Truck, ShoppingBag, UtensilsCrossed } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { OrderTrackingStatus } from '../types';
 
 const OrderHistory: React.FC = () => {
   const { getCustomerOrders, currentCustomer } = useApp();
   const orders = getCustomerOrders();
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: OrderTrackingStatus) => {
     switch (status) {
       case 'completed':
         return 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800';
       case 'cancelled':
         return 'bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800';
+      case 'confirmed':
+        return 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800';
+      case 'preparing':
+        return 'bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-800';
+      case 'out_for_delivery':
+        return 'bg-indigo-100 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800';
+      case 'ready_for_pickup':
+      case 'ready':
+        return 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800';
       default:
         return 'bg-orange-100 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-800';
     }
   };
 
-  const getStatusIcon = (status: string) => {
+  const getStatusIcon = (status: OrderTrackingStatus) => {
     switch (status) {
       case 'completed':
         return <CheckCircle2 className="w-5 h-5" />;
       case 'cancelled':
         return <XCircle className="w-5 h-5" />;
+      case 'confirmed':
+        return <CheckCircle2 className="w-5 h-5" />;
+      case 'preparing':
+        return <ChefHat className="w-5 h-5" />;
+      case 'out_for_delivery':
+        return <Truck className="w-5 h-5" />;
+      case 'ready_for_pickup':
+        return <ShoppingBag className="w-5 h-5" />;
+      case 'ready':
+        return <UtensilsCrossed className="w-5 h-5" />;
       default:
         return <Clock className="w-5 h-5" />;
+    }
+  };
+
+  const getStatusLabel = (status: OrderTrackingStatus) => {
+    switch (status) {
+      case 'pending':
+        return 'Order Received';
+      case 'confirmed':
+        return 'Order Confirmed';
+      case 'preparing':
+        return 'Preparing';
+      case 'ready':
+        return 'Ready';
+      case 'out_for_delivery':
+        return 'Out for Delivery';
+      case 'ready_for_pickup':
+        return 'Ready for Pickup';
+      case 'completed':
+        return 'Completed';
+      case 'cancelled':
+        return 'Cancelled';
+      default:
+        return status.charAt(0).toUpperCase() + status.slice(1);
     }
   };
 
@@ -95,7 +138,7 @@ const OrderHistory: React.FC = () => {
                       <h3 className="text-xl font-bold">Order #{order.id}</h3>
                       <span className={`px-3 py-1 rounded-full text-xs font-bold border flex items-center gap-1.5 ${getStatusColor(order.status)}`}>
                         {getStatusIcon(order.status)}
-                        {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                        {getStatusLabel(order.status)}
                       </span>
                     </div>
                     <div className="flex flex-wrap items-center gap-4 text-sm text-zinc-500 dark:text-zinc-400">
@@ -146,6 +189,19 @@ const OrderHistory: React.FC = () => {
                   <div className="mt-4 pt-4 border-t border-zinc-200 dark:border-zinc-800">
                     <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">Delivery Address:</p>
                     <p className="text-sm font-medium">{order.customerAddress}</p>
+                  </div>
+                )}
+
+                {/* Track Order Button */}
+                {order.status !== 'completed' && order.status !== 'cancelled' && (
+                  <div className="mt-4 pt-4 border-t border-zinc-200 dark:border-zinc-800">
+                    <Link
+                      to={`/track-order/${order.id}`}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-bold transition-colors text-sm"
+                    >
+                      <Navigation className="w-4 h-4" />
+                      Track Order
+                    </Link>
                   </div>
                 )}
               </div>

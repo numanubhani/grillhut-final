@@ -5,7 +5,7 @@ export const INITIAL_CATEGORIES: Category[] = [
   { id: '1', name: 'Burgers' },
   { id: '2', name: 'Pizza' },
   { id: '3', name: 'Sandwiches' },
-  { id: '4', name: 'Nuggets' }
+  { id: '4', name: 'Appetizer' }
 ];
 
 export const INITIAL_PRODUCTS: Product[] = [
@@ -29,7 +29,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     originalPrice: 1920.00,
     discount: 27,
     discountText: 'SELECTED FRIED CHICKEN',
-    category: 'Nuggets',
+    category: 'Appetizer',
     image: 'https://images.unsplash.com/photo-1562967914-608f82629710?auto=format&fit=crop&w=800&q=80',
     isHidden: false
   },

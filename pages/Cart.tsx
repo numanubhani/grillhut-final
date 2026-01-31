@@ -24,15 +24,20 @@ const Cart: React.FC = () => {
     return products.find(p => p.id === productId);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (cart.length === 0) return;
     const address = deliveryType === 'delivery' ? customerAddress : undefined;
-    placeOrder(customerName, customerPhone, address);
-    setIsOrdered(true);
-    setTimeout(() => {
-      navigate('/');
-    }, 3000);
+    try {
+      setIsOrdered(true);
+      await placeOrder(customerName, customerPhone, address);
+      setTimeout(() => {
+        navigate('/');
+      }, 3000);
+    } catch (error) {
+      setIsOrdered(false);
+      // Error toast is shown in placeOrder function
+    }
   };
 
   if (isOrdered) {

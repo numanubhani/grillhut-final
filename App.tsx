@@ -1,6 +1,7 @@
 
 import React, { useEffect } from 'react';
 import { HashRouter as Router, Routes, Route } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import { AppProvider } from './context/AppContext';
 import Navbar from './components/Navbar';
 import DeliveryModal from './components/DeliveryModal';
@@ -11,17 +12,61 @@ import Checkout from './pages/Checkout';
 import ProductDetail from './pages/ProductDetail';
 import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
+import OrderTracking from './pages/OrderTracking';
+import OrderHistory from './pages/OrderHistory';
+import CustomerLogin from './pages/CustomerLogin';
+import CustomerSignup from './pages/CustomerSignup';
+import Cart from './pages/Cart';
 import { Flame, Instagram, Facebook, Twitter, MapPin, Phone } from 'lucide-react';
 
 const App: React.FC = () => {
   useEffect(() => {
-    if ('Notification' in window && Notification.permission !== 'denied') {
-      Notification.requestPermission();
+    // Request notification permission
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().then((permission) => {
+        if (permission === 'granted') {
+          console.log('Notification permission granted');
+        }
+      });
+    }
+
+    // Request persistent notification permission for service worker
+    if ('serviceWorker' in navigator && 'Notification' in window) {
+      navigator.serviceWorker.ready.then((registration) => {
+        if (Notification.permission === 'default') {
+          Notification.requestPermission();
+        }
+      });
     }
   }, []);
 
   return (
     <AppProvider>
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: '#fff',
+            color: '#09090b',
+            borderRadius: '12px',
+            padding: '16px',
+            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)',
+          },
+          success: {
+            iconTheme: {
+              primary: '#16a34a',
+              secondary: '#fff',
+            },
+          },
+          error: {
+            iconTheme: {
+              primary: '#dc2626',
+              secondary: '#fff',
+            },
+          },
+        }}
+      />
       <Router>
         <div className="min-h-screen flex flex-col">
           <DeliveryModal />
@@ -35,6 +80,11 @@ const App: React.FC = () => {
               <Route path="/product/:id" element={<ProductDetail />} />
               <Route path="/admin/login" element={<AdminLogin />} />
               <Route path="/admin" element={<AdminDashboard />} />
+              <Route path="/track-order/:orderId" element={<OrderTracking />} />
+              <Route path="/orders" element={<OrderHistory />} />
+              <Route path="/login" element={<CustomerLogin />} />
+              <Route path="/signup" element={<CustomerSignup />} />
+              <Route path="/cart" element={<Cart />} />
             </Routes>
           </main>
           

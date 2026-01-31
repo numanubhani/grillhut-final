@@ -1,8 +1,192 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
+import { Link } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { useApp } from '../context/AppContext';
-import { Package, Plus, Trash2, Eye, EyeOff, CheckCircle, Clock, XCircle, PlusCircle, LayoutGrid, Tag } from 'lucide-react';
+import { Package, Plus, Trash2, Eye, EyeOff, CheckCircle, Clock, XCircle, PlusCircle, LayoutGrid, Tag, ChefHat, Truck, ShoppingBag, UtensilsCrossed, ChevronDown, ExternalLink } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
+import { OrderTrackingStatus, Order } from '../types';
+import { apiService } from '../services/api';
+
+// Order Status Dropdown Component
+const OrderStatusDropdown: React.FC<{ order: Order; onStatusChange: (status: OrderTrackingStatus) => void }> = ({ order, onStatusChange }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number; vertical: 'bottom' | 'top'; horizontal: 'right' | 'left' }>({ top: 0, left: 0, vertical: 'bottom', horizontal: 'right' });
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const dropdownMenuRef = useRef<HTMLDivElement>(null);
+
+  const updatePosition = () => {
+    if (buttonRef.current) {
+      const buttonRect = buttonRef.current.getBoundingClientRect();
+      const dropdownHeight = 256; // max-h-64 = 256px
+      const dropdownWidth = 224; // w-56 = 224px (sm:w-56)
+      const spaceBelow = window.innerHeight - buttonRect.bottom;
+      const spaceAbove = buttonRect.top;
+      const spaceRight = window.innerWidth - buttonRect.right;
+      const spaceLeft = buttonRect.left;
+      
+      const vertical = (spaceBelow < dropdownHeight && spaceAbove > dropdownHeight) ? 'top' as const : 'bottom' as const;
+      const horizontal = (spaceRight < dropdownWidth && spaceLeft > dropdownWidth) ? 'left' as const : 'right' as const;
+      
+      // Calculate absolute position
+      let top = 0;
+      let left = 0;
+      
+      if (vertical === 'bottom') {
+        top = buttonRect.bottom + window.scrollY + 8; // mt-2 = 8px
+      } else {
+        top = buttonRect.top + window.scrollY - dropdownHeight - 8; // mb-2 = 8px
+      }
+      
+      if (horizontal === 'right') {
+        left = buttonRect.right + window.scrollX - dropdownWidth;
+      } else {
+        left = buttonRect.left + window.scrollX;
+      }
+      
+      setDropdownPosition({ top, left, vertical, horizontal });
+    }
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      updatePosition();
+      
+      // Update position on scroll/resize
+      window.addEventListener('scroll', updatePosition, true);
+      window.addEventListener('resize', updatePosition);
+      
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+        window.removeEventListener('scroll', updatePosition, true);
+        window.removeEventListener('resize', updatePosition);
+      };
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
+
+  const getStatusOptions = (): { value: OrderTrackingStatus; label: string; icon: React.ReactNode; color: string }[] => {
+    const allOptions: { value: OrderTrackingStatus; label: string; icon: React.ReactNode; color: string }[] = [
+      { value: 'pending', label: 'Pending', icon: <Clock className="w-4 h-4" />, color: 'text-amber-600' },
+      { value: 'confirmed', label: 'Confirmed', icon: <CheckCircle className="w-4 h-4" />, color: 'text-blue-600' },
+      { value: 'preparing', label: 'Preparing', icon: <ChefHat className="w-4 h-4" />, color: 'text-purple-600' },
+    ];
+
+    if (order.deliveryType === 'delivery') {
+      allOptions.push(
+        { value: 'out_for_delivery', label: 'Out for Delivery', icon: <Truck className="w-4 h-4" />, color: 'text-indigo-600' }
+      );
+    } else {
+      allOptions.push(
+        { value: 'ready', label: 'Ready', icon: <UtensilsCrossed className="w-4 h-4" />, color: 'text-green-600' },
+        { value: 'ready_for_pickup', label: 'Ready for Pickup', icon: <ShoppingBag className="w-4 h-4" />, color: 'text-green-600' }
+      );
+    }
+
+    allOptions.push(
+      { value: 'completed', label: 'Completed', icon: <CheckCircle className="w-4 h-4" />, color: 'text-green-600' },
+      { value: 'cancelled', label: 'Cancelled', icon: <XCircle className="w-4 h-4" />, color: 'text-red-600' }
+    );
+
+    return allOptions;
+  };
+
+  const statusOptions = getStatusOptions();
+  const currentStatus = statusOptions.find(opt => opt.value === order.status);
+
+  const getStatusColor = (status: OrderTrackingStatus) => {
+    switch (status) {
+      case 'completed':
+        return 'bg-green-100 text-green-600 dark:bg-green-900/30';
+      case 'cancelled':
+        return 'bg-red-100 text-red-600 dark:bg-red-900/30';
+      case 'confirmed':
+        return 'bg-blue-100 text-blue-600 dark:bg-blue-900/30';
+      case 'preparing':
+        return 'bg-purple-100 text-purple-600 dark:bg-purple-900/30';
+      case 'out_for_delivery':
+        return 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30';
+      case 'ready_for_pickup':
+      case 'ready':
+        return 'bg-green-100 text-green-600 dark:bg-green-900/30';
+      default:
+        return 'bg-amber-100 text-amber-600 dark:bg-amber-900/30';
+    }
+  };
+
+  const handleStatusChange = (status: OrderTrackingStatus) => {
+    onStatusChange(status);
+    setIsOpen(false);
+  };
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <button
+        ref={buttonRef}
+        onClick={() => setIsOpen(!isOpen)}
+        className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold border transition-all hover:shadow-md ${
+          getStatusColor(order.status)
+        }`}
+      >
+        {currentStatus?.icon}
+        <span className="hidden sm:inline">{currentStatus?.label || order.status.replace(/_/g, ' ')}</span>
+        <span className="sm:hidden">{currentStatus?.label.charAt(0) || order.status.charAt(0)}</span>
+        <ChevronDown className={`w-3 h-3 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+
+      {isOpen && createPortal(
+        <>
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 z-40" 
+            onClick={() => setIsOpen(false)}
+          />
+          {/* Dropdown - Rendered via Portal to escape table overflow */}
+          <div 
+            ref={dropdownMenuRef}
+            className="fixed w-48 sm:w-56 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xl z-50 overflow-hidden"
+            style={{
+              top: `${dropdownPosition.top}px`,
+              left: `${dropdownPosition.left}px`,
+              maxHeight: 'min(16rem, calc(100vh - 2rem))',
+            }}
+          >
+            <div className="py-1 max-h-64 overflow-y-auto scrollbar-hide">
+              {statusOptions.map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => handleStatusChange(option.value)}
+                  disabled={order.status === option.value}
+                  className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors ${
+                    order.status === option.value
+                      ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 cursor-not-allowed'
+                      : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 cursor-pointer active:bg-zinc-100 dark:active:bg-zinc-700'
+                  }`}
+                >
+                  <span className={option.color}>{option.icon}</span>
+                  <span className="flex-1 text-left">{option.label}</span>
+                  {order.status === option.value && (
+                    <CheckCircle className="w-4 h-4 text-orange-600 dark:text-orange-400 shrink-0" />
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        </>,
+        document.body
+      )}
+    </div>
+  );
+};
 
 const AdminDashboard: React.FC = () => {
   const { 
@@ -12,9 +196,116 @@ const AdminDashboard: React.FC = () => {
   } = useApp();
   
   const [activeTab, setActiveTab] = useState<'orders' | 'products' | 'categories'>('orders');
+  const [orderFilter, setOrderFilter] = useState<'all' | 'in-progress' | 'completed' | 'cancelled'>('all');
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [newProduct, setNewProduct] = useState({ name: '', description: '', price: 0, category: '', image: '' });
   const [newCatName, setNewCatName] = useState('');
+  const [lastOrderCount, setLastOrderCount] = useState(orders.length);
+
+  // Listen for BroadcastChannel messages (cross-tab communication)
+  useEffect(() => {
+    if (!isAdmin) return;
+
+    let channel: BroadcastChannel | null = null;
+    
+    try {
+      if (typeof BroadcastChannel !== 'undefined') {
+        channel = new BroadcastChannel('order-notifications');
+        
+        channel.onmessage = (event) => {
+          if (event.data.type === 'NEW_ORDER') {
+            const order = event.data.order;
+            // Show toast notification
+            toast.success(
+              `🔔 New Order Received!\nOrder #${order.id}\nFrom: ${order.customerName}\nTotal: Rs. ${order.total.toFixed(2)}`,
+              {
+                duration: 6000,
+                position: 'top-right',
+                icon: '🔔',
+                style: {
+                  whiteSpace: 'pre-line',
+                },
+              }
+            );
+          }
+        };
+      }
+    } catch (err) {
+      console.log('BroadcastChannel error:', err);
+    }
+
+    return () => {
+      if (channel) {
+        channel.close();
+      }
+    };
+  }, [isAdmin]);
+
+  // Listen for service worker messages (for when app is in background)
+  useEffect(() => {
+    if (!isAdmin) return;
+
+    if ('serviceWorker' in navigator) {
+      const handleMessage = (event: MessageEvent) => {
+        if (event.data && event.data.type === 'NEW_ORDER') {
+          const order = event.data.order;
+          toast.success(
+            `🔔 New Order Received!\nOrder #${order.id}\nFrom: ${order.customerName}\nTotal: Rs. ${order.total.toFixed(2)}`,
+            {
+              duration: 6000,
+              position: 'top-right',
+              icon: '🔔',
+              style: {
+                whiteSpace: 'pre-line',
+              },
+            }
+          );
+        }
+      };
+
+      navigator.serviceWorker.addEventListener('message', handleMessage);
+
+      return () => {
+        navigator.serviceWorker.removeEventListener('message', handleMessage);
+      };
+    }
+  }, [isAdmin]);
+
+  // Monitor for new orders when admin is viewing orders tab
+  useEffect(() => {
+    if (!isAdmin || activeTab !== 'orders') return;
+
+    // Check if new orders were added (orders are sorted newest first)
+    if (orders.length > lastOrderCount && lastOrderCount > 0) {
+      const newOrdersCount = orders.length - lastOrderCount;
+      // Get the newest orders (first in array since sorted by timestamp desc)
+      const newOrders = orders.slice(0, newOrdersCount);
+      
+      // Show toast for each new order
+      newOrders.forEach((order) => {
+        toast.success(
+          `🔔 New Order Received!\nOrder #${order.id}\nFrom: ${order.customerName}\nTotal: Rs. ${order.total.toFixed(2)}`,
+          {
+            duration: 6000,
+            position: 'top-right',
+            icon: '🔔',
+            style: {
+              whiteSpace: 'pre-line',
+            },
+          }
+        );
+      });
+      
+      setLastOrderCount(orders.length);
+    }
+  }, [isAdmin, activeTab, orders.length, lastOrderCount]);
+
+  // Initialize lastOrderCount when component mounts
+  useEffect(() => {
+    if (isAdmin && activeTab === 'orders') {
+      setLastOrderCount(orders.length);
+    }
+  }, [isAdmin, activeTab]);
 
   if (!isAdmin) return <Navigate to="/admin/login" />;
 
@@ -62,42 +353,117 @@ const AdminDashboard: React.FC = () => {
         </div>
       </div>
 
-      {activeTab === 'orders' && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-white dark:bg-zinc-900 p-6 rounded-[2rem] border border-slate-100 dark:border-zinc-800">
-              <p className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-1">Pending Orders</p>
-              <h3 className="text-3xl font-black">{orders.filter(o => o.status === 'pending').length}</h3>
-            </div>
-            <div className="bg-white dark:bg-zinc-900 p-6 rounded-[2rem] border border-slate-100 dark:border-zinc-800">
-              <p className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-1">Completed Today</p>
-              <h3 className="text-3xl font-black">{orders.filter(o => o.status === 'completed').length}</h3>
-            </div>
-            <div className="bg-white dark:bg-zinc-900 p-6 rounded-[2rem] border border-slate-100 dark:border-zinc-800">
-              <p className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-1">Total Revenue</p>
-              <h3 className="text-3xl font-black text-primary-500">${orders.reduce((sum, o) => o.status === 'completed' ? sum + o.total : sum, 0).toFixed(2)}</h3>
-            </div>
-          </div>
+      {activeTab === 'orders' && (() => {
+        // Sort orders by timestamp (newest first) and filter based on selected filter
+        const sortedOrders = [...orders].sort((a, b) => b.timestamp - a.timestamp);
+        const filteredOrders = sortedOrders.filter(order => {
+          switch (orderFilter) {
+            case 'in-progress':
+              return order.status !== 'completed' && order.status !== 'cancelled';
+            case 'completed':
+              return order.status === 'completed';
+            case 'cancelled':
+              return order.status === 'cancelled';
+            default:
+              return true; // 'all'
+          }
+        });
 
-          <div className="bg-white dark:bg-zinc-900 rounded-[2.5rem] border border-slate-100 dark:border-zinc-800 overflow-hidden">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="border-b border-slate-100 dark:border-zinc-800">
-                  <th className="px-8 py-5 text-sm font-black uppercase tracking-wider text-slate-400">Order ID</th>
-                  <th className="px-8 py-5 text-sm font-black uppercase tracking-wider text-slate-400">Customer</th>
-                  <th className="px-8 py-5 text-sm font-black uppercase tracking-wider text-slate-400">Delivery</th>
-                  <th className="px-8 py-5 text-sm font-black uppercase tracking-wider text-slate-400">Total</th>
-                  <th className="px-8 py-5 text-sm font-black uppercase tracking-wider text-slate-400">Status</th>
-                  <th className="px-8 py-5 text-sm font-black uppercase tracking-wider text-slate-400 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50 dark:divide-zinc-800">
-                {orders.length === 0 ? (
-                  <tr><td colSpan={6} className="px-8 py-20 text-center text-slate-500">No orders placed yet.</td></tr>
-                ) : (
-                  orders.map(order => (
-                    <tr key={order.id} className="hover:bg-slate-50 dark:hover:bg-zinc-800/50 transition-colors">
-                      <td className="px-8 py-6 font-bold font-mono text-sm">{order.id}</td>
+        return (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="bg-white dark:bg-zinc-900 p-6 rounded-[2rem] border border-slate-100 dark:border-zinc-800">
+                <p className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-1">Active Orders</p>
+                <h3 className="text-3xl font-black">{orders.filter(o => o.status !== 'completed' && o.status !== 'cancelled').length}</h3>
+              </div>
+              <div className="bg-white dark:bg-zinc-900 p-6 rounded-[2rem] border border-slate-100 dark:border-zinc-800">
+                <p className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-1">Completed Today</p>
+                <h3 className="text-3xl font-black">{orders.filter(o => o.status === 'completed').length}</h3>
+              </div>
+              <div className="bg-white dark:bg-zinc-900 p-6 rounded-[2rem] border border-slate-100 dark:border-zinc-800">
+                <p className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-1">Total Revenue</p>
+                <h3 className="text-3xl font-black text-primary-500">${orders.reduce((sum, o) => o.status === 'completed' ? sum + o.total : sum, 0).toFixed(2)}</h3>
+              </div>
+            </div>
+
+            {/* Order Filter Tabs */}
+            <div className="bg-white dark:bg-zinc-900 p-1.5 rounded-2xl border border-slate-100 dark:border-zinc-800 flex gap-2 overflow-x-auto scrollbar-hide">
+              {[
+                { id: 'all', label: 'All Orders', count: orders.length, icon: Package },
+                { id: 'in-progress', label: 'In Progress', count: orders.filter(o => o.status !== 'completed' && o.status !== 'cancelled').length, icon: Clock },
+                { id: 'completed', label: 'Completed', count: orders.filter(o => o.status === 'completed').length, icon: CheckCircle },
+                { id: 'cancelled', label: 'Cancelled', count: orders.filter(o => o.status === 'cancelled').length, icon: XCircle }
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setOrderFilter(tab.id as any)}
+                  className={`flex items-center gap-2 px-4 sm:px-6 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap shrink-0 ${
+                    orderFilter === tab.id
+                      ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/20'
+                      : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  <tab.icon className="w-4 h-4" />
+                  <span>{tab.label}</span>
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                    orderFilter === tab.id
+                      ? 'bg-white/20 text-white'
+                      : 'bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400'
+                  }`}>
+                    {tab.count}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            <div className="bg-white dark:bg-zinc-900 rounded-[2.5rem] border border-slate-100 dark:border-zinc-800 overflow-hidden">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="border-b border-slate-100 dark:border-zinc-800">
+                    <th className="px-8 py-5 text-sm font-black uppercase tracking-wider text-slate-400">Order ID</th>
+                    <th className="px-8 py-5 text-sm font-black uppercase tracking-wider text-slate-400">Customer</th>
+                    <th className="px-8 py-5 text-sm font-black uppercase tracking-wider text-slate-400">Delivery</th>
+                    <th className="px-8 py-5 text-sm font-black uppercase tracking-wider text-slate-400">Total</th>
+                    <th className="px-8 py-5 text-sm font-black uppercase tracking-wider text-slate-400">Status</th>
+                    <th className="px-8 py-5 text-sm font-black uppercase tracking-wider text-slate-400 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50 dark:divide-zinc-800">
+                  {filteredOrders.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="px-8 py-20 text-center text-slate-500">
+                        {orderFilter === 'all' && 'No orders placed yet.'}
+                        {orderFilter === 'in-progress' && 'No orders in progress.'}
+                        {orderFilter === 'completed' && 'No completed orders.'}
+                        {orderFilter === 'cancelled' && 'No cancelled orders.'}
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredOrders.map((order, index) => {
+                      // Check if order is new (placed within last 30 seconds)
+                      const isNewOrder = Date.now() - order.timestamp < 30000;
+                      
+                      return (
+                        <tr 
+                          key={order.id} 
+                          className={`hover:bg-slate-50 dark:hover:bg-zinc-800/50 transition-colors ${
+                            isNewOrder ? 'bg-green-50/50 dark:bg-green-900/10' : ''
+                          }`}
+                        >
+                      <td className="px-8 py-6">
+                        <Link 
+                          to={`/track-order/${order.id}`}
+                          className="font-bold font-mono text-sm text-primary-500 hover:text-primary-600 dark:text-primary-400 dark:hover:text-primary-300 transition-colors inline-flex items-center gap-1.5 group"
+                        >
+                          {order.id}
+                          {isNewOrder && (
+                            <span className="px-1.5 py-0.5 bg-green-500 text-white text-[10px] font-bold rounded-full animate-pulse">
+                              NEW
+                            </span>
+                          )}
+                          <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </Link>
+                      </td>
                       <td className="px-8 py-6">
                         <div className="font-bold">{order.customerName}</div>
                         <div className="text-xs text-slate-500">{order.customerPhone}</div>
@@ -113,32 +479,48 @@ const AdminDashboard: React.FC = () => {
                         <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
                           order.status === 'completed' ? 'bg-green-100 text-green-600 dark:bg-green-900/30' :
                           order.status === 'cancelled' ? 'bg-red-100 text-red-600 dark:bg-red-900/30' :
+                          order.status === 'confirmed' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30' :
+                          order.status === 'preparing' ? 'bg-purple-100 text-purple-600 dark:bg-purple-900/30' :
+                          order.status === 'out_for_delivery' ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30' :
+                          order.status === 'ready_for_pickup' || order.status === 'ready' ? 'bg-green-100 text-green-600 dark:bg-green-900/30' :
                           'bg-amber-100 text-amber-600 dark:bg-amber-900/30'
                         }`}>
                           {order.status === 'pending' && <Clock className="w-3 h-3" />}
+                          {order.status === 'confirmed' && <CheckCircle className="w-3 h-3" />}
+                          {order.status === 'preparing' && <ChefHat className="w-3 h-3" />}
+                          {order.status === 'out_for_delivery' && <Truck className="w-3 h-3" />}
+                          {order.status === 'ready_for_pickup' && <ShoppingBag className="w-3 h-3" />}
+                          {order.status === 'ready' && <UtensilsCrossed className="w-3 h-3" />}
                           {order.status === 'completed' && <CheckCircle className="w-3 h-3" />}
                           {order.status === 'cancelled' && <XCircle className="w-3 h-3" />}
-                          {order.status.toUpperCase()}
+                          {order.status.replace(/_/g, ' ').toUpperCase()}
                         </span>
                       </td>
                       <td className="px-8 py-6 text-right">
-                        <div className="flex justify-end gap-2">
-                          {order.status === 'pending' && (
-                            <>
-                              <button onClick={() => updateOrderStatus(order.id, 'completed')} className="p-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors"><CheckCircle className="w-4 h-4" /></button>
-                              <button onClick={() => updateOrderStatus(order.id, 'cancelled')} className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors"><XCircle className="w-4 h-4" /></button>
-                            </>
-                          )}
+                        <div className="flex justify-end items-center gap-2">
+                          <Link
+                            to={`/track-order/${order.id}`}
+                            className="p-2 bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-600 dark:text-slate-300 rounded-lg transition-colors"
+                            title="View Order Tracking"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Link>
+                          <OrderStatusDropdown 
+                            order={order} 
+                            onStatusChange={(status) => updateOrderStatus(order.id, status)} 
+                          />
                         </div>
                       </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {activeTab === 'products' && (
         <div className="space-y-8">
